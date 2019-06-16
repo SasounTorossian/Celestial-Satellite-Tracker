@@ -12,7 +12,11 @@ import pigpio
 import subprocess
 from skyfield.api import load
 from skyfield.api import Topos
-# Python QT for GUI in project!!!
+
+#lat/lon of Manchester, UK. Used in event that GPS cannot conect
+default_lat = 53.48
+defualt_lon = -2.24
+gps_retry = 10
 
 def start_pigpiod():
     out = subprocess.Popen(['sudo', 'pigpiod'], 
@@ -202,18 +206,23 @@ def get_heading(sensor):
 def get_lat_lon(session):
     print("get_lat_lon")
     while(1):
-        report = session.next()
-        #print(report) #prints raw incoming gps data
-        if report['class'] == 'TPV':
-            if (hasattr(report, 'lat') and hasattr(report, 'lon')):
-                print('Latitude: ', report.lat)
-                print('Longitude: ', report.lon)                
-                return report.lat, report.lon
+        if(gps_retry < 10):
+            report = session.next()
+            #print(report) #prints raw incoming gps data
+            if report['class'] == 'TPV':
+                if (hasattr(report, 'lat') and hasattr(report, 'lon')):
+                    print('Latitude: ', report.lat)
+                    print('Longitude: ', report.lon)                
+                    return report.lat, report.lon
+                else:
+                    print('gps attributes not ready')
             else:
-                print('gps attributes not ready')
+                print('Attempting to establish GPS connection')
+                time.sleep(1)
+            gps_retry++
         else:
-            print('Attempting to establish GPS connection')
-            time.sleep(1)
+            print('Cannot establish GPS connection, using default values')
+            return defualt_lat, defualt_lon
             
 def get_true_north(lat, lon, heading):
     print("get_true_north")
