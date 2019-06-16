@@ -13,11 +13,6 @@ import subprocess
 from skyfield.api import load
 from skyfield.api import Topos
 
-#lat/lon of Manchester, UK. Used in event that GPS cannot conect
-default_lat = 53.48
-defualt_lon = -2.24
-gps_retry = 10
-
 def start_pigpiod():
     out = subprocess.Popen(['sudo', 'pigpiod'], 
 						universal_newlines = True,
@@ -94,7 +89,7 @@ def run_stepper(angle, gpio):
         angle_change = angle - run_stepper.current_angle
     
     CW = 1 if angle_change >= 0 else 0
-    step_count = int(abs(angle_change)/1.8)
+    step_count = int(abs(angle_change)/0.6)
     if(step_count <= 2):
         print("step count: {}".format(step_count))
         print("CW: {}".format(CW))
@@ -126,7 +121,7 @@ def align_stepper(angle, gpio):
         step_count = int(angle/1.8)
     else:
         CW = 1
-        step_count = int((360-angle)/1.8)
+        step_count = int((360-angle)/0.6)
     
     print("step count: {}".format(step_count*8))
     print("CW: {}".format(CW))
@@ -149,7 +144,7 @@ def setup_servo(gpio):
 
 def run_servo(angle, gpio):
     print("run_servo")
-    dc = (100/9)*angle + 1500
+    dc = (100/9)*(-angle) + 1500
     dc = round(dc, 0)
     print(dc)
     gpio.set_servo_pulsewidth(18, dc)
@@ -205,6 +200,10 @@ def get_heading(sensor):
 
 def get_lat_lon(session):
     print("get_lat_lon")
+    #lat/lon of Manchester, UK. Used in event that GPS cannot conect
+    default_lat = 53.48
+    default_lon = -2.24
+    gps_retry = 20
     while(1):
         if(gps_retry < 10):
             report = session.next()
@@ -219,10 +218,10 @@ def get_lat_lon(session):
             else:
                 print('Attempting to establish GPS connection')
                 time.sleep(1)
-            gps_retry++
+            gps_retry += 1
         else:
             print('Cannot establish GPS connection, using default values')
-            return defualt_lat, defualt_lon
+            return default_lat, default_lon
             
 def get_true_north(lat, lon, heading):
     print("get_true_north")
