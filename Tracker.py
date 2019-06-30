@@ -13,6 +13,12 @@ import subprocess
 from skyfield.api import load
 from skyfield.api import Topos
 
+stepper_gear_teeth = 16
+stepper_degrees_per_step = 1.8
+
+pillar_gear_teeth = 48
+pillar_degrees_per_step = 1.8 * (16/48)
+
 def start_pigpiod():
     out = subprocess.Popen(['sudo', 'pigpiod'], 
 						universal_newlines = True,
@@ -59,16 +65,16 @@ def setup_stepper(gpio):
     gpio.set_mode(MODE_PIN3, pigpio.OUTPUT)
     
     #RESOLUTION
-    #'Full': (0, 0, 0),
-    #'Half': (1, 0, 0),
-    #'1/4': (0, 1, 0),
-    #'1/8': (1, 1, 0), SELECTED
-    #'1/16': (0, 0, 1),
+    #'Full': (0, 0, 0), 
+    #'Half': (1, 0, 0), 
+    #'1/4': (0, 1, 0), 
+    #'1/8': (1, 1, 0),
+    #'1/16': (0, 0, 1), SELECTED
     #'1/32': (1, 0, 1)}
     
-    gpio.write(MODE_PIN1, 1)
-    gpio.write(MODE_PIN2, 1)
-    gpio.write(MODE_PIN3, 0)
+    gpio.write(MODE_PIN1, 0)
+    gpio.write(MODE_PIN2, 0)
+    gpio.write(MODE_PIN3, 1)
     
 
 def run_stepper(angle, gpio):
@@ -89,7 +95,7 @@ def run_stepper(angle, gpio):
         angle_change = angle - run_stepper.current_angle
     
     CW = 1 if angle_change >= 0 else 0
-    step_count = int(abs(angle_change)/0.6)
+    step_count = int(abs(angle_change)/pillar_degrees_per_step)
     if(step_count <= 2):
         print("step count: {}".format(step_count))
         print("CW: {}".format(CW))
@@ -105,7 +111,7 @@ def run_stepper(angle, gpio):
     print('Exiting Sleep Mode')
     gpio.write(SLP, 1)
     
-    for x in range (step_count*8):
+    for x in range (step_count * 16):
         gpio.write(STEP, 1)
         time.sleep(DELAY)
         gpio.write(STEP, 0)
@@ -118,19 +124,19 @@ def align_stepper(angle, gpio):
     print("align_stepper")
     if (angle <= 180):
         CW = 0
-        step_count = int(angle/1.8)
+        step_count = int(angle/pillar_degrees_per_step)
     else:
         CW = 1
-        step_count = int((360-angle)/0.6)
+        step_count = int((360-angle)/pillar_degrees_per_step)
     
-    print("step count: {}".format(step_count*8))
+    print("step count: {}".format(step_count))
     print("CW: {}".format(CW))
     gpio.write(DIR, CW)
     
     print('Exiting Sleep Mode')
     gpio.write(SLP, 1)
     
-    for x in range (step_count*8):
+    for x in range (step_count * 16):
         gpio.write(STEP, 1)
         time.sleep(DELAY)
         gpio.write(STEP, 0)
